@@ -7,7 +7,7 @@ set -o pipefail
 
 # Paths (home folder version)
 
-ROOT_DIR="$HOME/netwatch"
+ROOT_DIR="$HOME/Documents/systems-prog-proj-main"
 
 # Config directory + files
 CONF_PATH="$ROOT_DIR/config"
