@@ -1,4 +1,4 @@
 # Format: process_name : service_name : restart_command
-sshd:ssh:default
-cron:cron:default
+#sshd:ssh:default
+#cron:cron:default
 nginx:nginx:default
