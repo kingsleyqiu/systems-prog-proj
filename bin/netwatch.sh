@@ -6,9 +6,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-########################
 # Paths & defaults
-########################
+
 ROOT_DIR="${HOME}/netwatch"
 CONF_PATH="${ROOT_DIR}/config"
 CONF_FILE="${CONF_PATH}/netwatch.conf"
@@ -25,12 +24,12 @@ mkdir -p "$CACHE_DIR" "$TIMERS_DIR" "$LOG_DIR"
 LOG_FILE_DEFAULT="${LOG_DIR}/netwatch.log"
 LOG_FILE="$LOG_FILE_DEFAULT"
 
-# default service command (detected later)
+
 SERVICE_COMMAND=""
 
-########################
+
 # Utilities
-########################
+
 log_msg() {
   local msg="$1"
   mkdir -p "$(dirname "$LOG_FILE")"
@@ -69,9 +68,9 @@ should_run() {
 # command exists helper
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 
-########################
+
 # Config loading
-########################
+
 load_conf() {
   # defaults (these can be overridden in $CONF_FILE)
   EMAIL_TO="root"
@@ -130,9 +129,9 @@ load_conf() {
   detect_service_command
 }
 
-########################
+
 # Service detection + start
-########################
+
 detect_service_command() {
   SERVICE_COMMAND=""
   if cmd_exists systemctl; then
@@ -160,10 +159,10 @@ start_service() {
   fi
 }
 
-########################
+
 # Email helper
 # send_email <subject> <body_file>
-########################
+
 send_email() {
   local subject="$1"
   local bodyfile="$2"
@@ -181,9 +180,9 @@ send_email() {
   fi
 }
 
-########################
+
 # Monitoring: Memory
-########################
+
 monitor_memory_usage() {
   if ! should_run mem_usage "$MEM_SCAN_INTERVAL"; then
     return
@@ -228,9 +227,9 @@ monitor_memory_usage() {
   fi
 }
 
-########################
+
 # Monitoring: CPU (uses /proc/stat snapshot)
-########################
+
 # based on two reads of /proc/stat to compute total busy/time delta
 monitor_cpu_usage() {
   if ! should_run cpu_usage "$CPU_SCAN_INTERVAL"; then
@@ -277,9 +276,9 @@ monitor_cpu_usage() {
   fi
 }
 
-########################
+
 # Monitoring: Disk
-########################
+
 monitor_disk_usage() {
   if ! should_run disk_usage "$DISK_SCAN_INTERVAL"; then
     return
@@ -319,9 +318,9 @@ monitor_disk_usage() {
   fi
 }
 
-########################
+
 # Monitoring: Directories (integrity)
-########################
+
 monitor_directories() {
   if ! should_run directories_status "$DIRECTORIES_SCAN_INTERVAL"; then
     return
@@ -369,9 +368,9 @@ monitor_directories() {
   rm -f "$NEW_FILE" "$DIFF_FILE" "$EMAIL_FILE" || true
 }
 
-########################
+
 # Monitoring: Servers (ping / port)
-########################
+
 monitor_servers() {
   if ! should_run servers_status "$SERVERS_SCAN_INTERVAL"; then
     return
@@ -425,9 +424,9 @@ monitor_servers() {
   fi
 }
 
-########################
+
 # Monitoring: Services / Processes
-########################
+
 monitor_services() {
   if ! should_run services_status "$PROC_SCAN_INTERVAL"; then
     return
@@ -472,9 +471,9 @@ monitor_services() {
   fi
 }
 
-########################
+
 # Main
-########################
+
 run_all_checks() {
   monitor_memory_usage
   monitor_cpu_usage
@@ -502,7 +501,38 @@ main() {
   load_conf
   local cmd="${1:-all}"
   case "$cmd" in
-    all) run_all_checks ;;
+    all)
+  run_all_checks
+
+  echo "========== NETWATCH SUMMARY =========="
+  echo "CPU:"
+  sed -n '1,3p' "$CACHE_DIR/cpu_usage.txt"
+  echo
+
+  echo "MEMORY:"
+  sed -n '1,3p' "$CACHE_DIR/mem_usage.txt"
+  echo
+
+  echo "DISK:"
+  sed -n '1,10p' "$CACHE_DIR/disk_usage.txt"
+  echo
+
+  if [[ -f "$CACHE_DIR/servers_status.txt" ]]; then
+    echo "SERVERS:"
+    cat "$CACHE_DIR/servers_status.txt"
+    echo
+  fi
+
+  if [[ -f "$CACHE_DIR/services_status.txt" ]]; then
+    echo "SERVICES:"
+    cat "$CACHE_DIR/services_status.txt"
+    echo
+  fi
+
+  echo "Logs: $LOG_FILE"
+  echo "======================================"
+  ;;
+
     mem) monitor_memory_usage ;;
     cpu) monitor_cpu_usage ;;
     disk) monitor_disk_usage ;;
